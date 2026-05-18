@@ -174,7 +174,7 @@ spec:
           bind-address: 0.0.0.0
           cloud-provider: external
           cluster-signing-cert-file: /etc/kubernetes/pki/ca.crt
-          cluster-signing-duration: 2160h0m0s  # 90 days. Default is 8760h0m0s (1 year).
+          cluster-signing-duration: 2160h0m0s # 90 days. Default is 8760h0m0s (1 year).
           cluster-signing-key-file: /etc/kubernetes/pki/ca.key
           # feature-gates: RotateKubeletServerCertificate=true,AppArmor=true
           kubeconfig: /etc/kubernetes/controller-manager.conf
