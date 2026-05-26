@@ -1,4 +1,5 @@
 {{- define "cluster.cluster" -}}
+{{- include "cluster.validate" . -}}
 ---
 {{- $networking := (include "networking" .) | fromYaml }}
 {{- $machines := (include "machines" .) | fromYaml }}
