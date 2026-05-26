@@ -88,12 +88,19 @@ exports:
       sshKeys:
       # - "name"
       token:
-        # Use an existing secret or create a new one.
-        existingSecret: false
-        # Token value to use when creating new secret.
+        # If true (default, recommended), the chart references an existing Secret
+        # by `secretName` and you create it out of band (ExternalSecrets, sealed
+        # secret, `kubectl create secret`, etc.). If false, the chart renders the
+        # Secret itself from `value` below; the token then lives in plaintext in
+        # your values.yaml, Helm release secret, and any rendered diff.
+        existingSecret: true
+        # Token value used only when `existingSecret: false`. Emitted via
+        # `stringData` (Helm doesn't encrypt this — kube-apiserver base64-encodes
+        # server-side).
         value: ""
-        # Name of the secret to create or use (existing secret).
+        # Name of the Secret (referenced when existingSecret: true, created when false).
         secretName: "hcloud"
+        # Key within the Secret containing the Hetzner API token.
         secretKey: "token"
         # For when creating new secret and for CAPI mgt clusters only.
         # Adds `clusterctl.cluster.x-k8s.io/move` label or not.
