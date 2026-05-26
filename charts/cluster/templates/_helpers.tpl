@@ -50,14 +50,30 @@ app.kubernetes.io/name: {{ include "cluster.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
-{{- if or .Values.hCloud.lb.existing.ip .Values.hCloud.lb.new }}
-{{ else }}
-{{- fail "Please use an existing LB via '.Values.hCloud.lb.existing' or add configuration for a new one via '.Values.hCloud.lb.new'." }}
-{{- end }}
-
-{{- if eq .Values.capi.providers.core.name "cluster-api" }}
-{{ else }}
-{{- fail "Please set which CAPI core provider to use. Supported providers: 'cluster-api'." }}
+{{/*
+validate runs preflight checks on .Values. Called from the top of
+`cluster.cluster` so the whole render fails at the first invalid config,
+instead of relying on top-level {{ fail }} blocks scattered through this
+helper file (which made the trigger point opaque and ran the hetzner-only
+LB check even when a different infrastructure provider was selected).
+*/}}
+{{- define "cluster.validate" -}}
+{{- if ne .Values.capi.providers.core.name "cluster-api" -}}
+{{- fail "Please set which CAPI core provider to use. Supported providers: 'cluster-api'." -}}
+{{- end -}}
+{{- if ne .Values.capi.providers.controlPlane.name "kubeadm" -}}
+{{- fail "Please set which CAPI controlPlane provider to use. Supported providers: 'kubeadm'." -}}
+{{- end -}}
+{{- if ne .Values.capi.providers.bootstrap.name "kubeadm" -}}
+{{- fail "Please set which CAPI bootstrap provider to use. Supported providers: 'kubeadm'." -}}
+{{- end -}}
+{{- if eq .Values.capi.providers.infrastructure.name "hetzner" -}}
+  {{- if not (or .Values.hCloud.lb.existing.ip .Values.hCloud.lb.new) -}}
+  {{- fail "Please use an existing LB via '.Values.hCloud.lb.existing' or add configuration for a new one via '.Values.hCloud.lb.new'." -}}
+  {{- end -}}
+{{- else -}}
+{{- fail "Please set which CAPI infrastructure provider to use. Supported providers: 'hetzner'." -}}
+{{- end -}}
 {{- end }}
 
 {{/*
@@ -256,21 +272,6 @@ files:
 {{- end }}
 {{- define "worker-kubeadm-config-template-name" -}}
 {{- printf "%s-%s" (include "worker-name" .) ((include "worker-kubeadm-config-template-spec" .) | sha256sum | trunc 16) }}
-{{- end }}
-
-{{- if eq .Values.capi.providers.infrastructure.name "hetzner" }}
-{{ else }}
-  {{- fail "Please set which CAPI infrastructure provider to use. Supported providers: 'hetzner'." }}
-{{- end }}
-
-{{- if eq .Values.capi.providers.controlPlane.name "kubeadm" }}
-{{ else }}
-{{- fail "Please set which CAPI controlPlane provider to use. Supported providers: 'kubeadm'." }}
-{{- end }}
-
-{{- if eq .Values.capi.providers.bootstrap.name "kubeadm" }}
-{{ else }}
-{{- fail "Please set which CAPI bootstrap provider to use. Supported providers: 'kubeadm'." }}
 {{- end }}
 
 {{/* Trim a version like "v1.31.4" to "v1.31" */}}
