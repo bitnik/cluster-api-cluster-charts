@@ -68,6 +68,17 @@ These charts are grouped under `charts/helpers`.
 - Charts are designed to work with Cluster API–compatible infrastructure providers.
 - The `example-workload-cluster` chart is **not intended for production use**.
 
+## Versioning
+
+All charts in this repository share a single version number and are released in lockstep.
+Application charts pin the `cluster` library by an exact version constraint (not a `~` or
+`^` range), so library bumps always reach consumers through a coordinated release rather
+than dependency resolution.
+
+When bumping any chart, bump all of them to the same new version in the same PR. The
+release workflow (`.github/workflows/release.yaml`) iterates every `Chart.yaml` and skips
+versions already published to GHCR, so unchanged charts cost nothing in the pipeline.
+
 ## Scope & Non-Goals
 
 ### Scope
