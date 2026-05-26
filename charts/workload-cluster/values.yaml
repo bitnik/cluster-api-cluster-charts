@@ -40,24 +40,27 @@ hCloud:
       replicas: 3
       remediation:
         enabled: true
-    worker:
-      type: "cpx32"
-      osVersion: "2404"
-      k8sVersion: "v1.31.4"
-      # buildTimestamp depends on hcloud project. Define it per cluster.
-      buildTimestamp: ""
-      imageName: >-
-        {{- $machines := (include "machines" $) | fromYaml -}}
-        cluster-api-ubuntu-{{ $machines.worker.osVersion }}-{{ $machines.worker.k8sVersion }}-{{ $machines.worker.buildTimestamp | required "ERROR: worker image buildTimestamp is required." }}
-      # This replicas must be ignored by ArgoCD. It is controlled by cluster autoscaler.
-      # replicas is in effect only until autoscaler is active, e.g. during bootstrap of the cluster.
-      replicas: 3
-      autoscaler:
-        enabled: true
-        minSize: "3"
-        maxSize: "4"
-      remediation:
-        enabled: true
+    workers:
+      defaults:
+        type: "cpx32"
+        osVersion: "2404"
+        k8sVersion: "v1.31.4"
+        # buildTimestamp depends on hcloud project. Define it per cluster.
+        buildTimestamp: ""
+        imageName: >-
+          {{- $machines := (include "machines" $) | fromYaml -}}
+          cluster-api-ubuntu-{{ $machines.workers.defaults.osVersion }}-{{ $machines.workers.defaults.k8sVersion }}-{{ $machines.workers.defaults.buildTimestamp | required "ERROR: worker image buildTimestamp is required." }}
+        # This replicas must be ignored by ArgoCD. It is controlled by cluster autoscaler.
+        # replicas is in effect only until autoscaler is active, e.g. during bootstrap of the cluster.
+        replicas: 3
+        autoscaler:
+          enabled: true
+          minSize: "3"
+          maxSize: "4"
+        remediation:
+          enabled: true
+      pools:
+        default: {}
 
 etcKubernetes:
   gitRepoUrl: https://github.com/unbyte-de/etc-kubernetes.git

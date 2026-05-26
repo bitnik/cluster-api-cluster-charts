@@ -14,11 +14,12 @@ hCloud:
       # k8sVersion: "v1.31.4"
       buildTimestamp: "1744781328"
       # replicas: 3
-    worker:
-      # type: "cpx42"
-      # osVersion: "2404"
-      # k8sVersion: "v1.31.4"
-      buildTimestamp: "1744781328"
+    workers:
+      defaults:
+        # type: "cpx42"
+        # osVersion: "2404"
+        # k8sVersion: "v1.31.4"
+        buildTimestamp: "1744781328"
 
 install:
   # enabled: false

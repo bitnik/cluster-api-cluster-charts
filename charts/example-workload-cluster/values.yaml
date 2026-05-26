@@ -34,14 +34,15 @@ hCloud:
       replicas: 3
       remediation:
         enabled: true
-    worker:
-      type: "cpx22"
-      # osVersion: "2404"
-      # k8sVersion: "v1.31.4"
-      # imageName: "cluster-api-ubuntu-<os-version>-<k8s-version>-<timestamp>"
-      replicas: 3
-      remediation:
-        enabled: true
+    workers:
+      defaults:
+        type: "cpx22"
+        # osVersion: "2404"
+        # k8sVersion: "v1.31.4"
+        # imageName: "cluster-api-ubuntu-<os-version>-<k8s-version>-<timestamp>"
+        replicas: 3
+        remediation:
+          enabled: true
 
 etcKubernetes:
   gitRepoUrl: https://github.com/unbyte-de/etc-kubernetes.git

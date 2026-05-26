@@ -59,29 +59,37 @@ exports:
           - type: Ready
             status: "False"
             timeout: 5m0s
-      worker:
-        osVersion: "" # e.g. "2404"
-        k8sVersion: "" # e.g. "v1.31.4"
-        imageName: ""
-        # If autoscaler is enabled, replicas is in effect only until autoscaler is active, e.g. during bootstrap of the cluster.
-        replicas: 3
-        # If autoscaler is enabled, replicas must be ignored by ArgoCD.
-        autoscaler:
-          # Adds annotations to MachineDeployment for Kubernetes Autoscaler (https://github.com/kubernetes/autoscaler).
-          enabled: false
-          minSize: ""
-          maxSize: ""
-        healthCheck:
-          enabled: true
-          maxUnhealthy: 100%
-          nodeStartupTimeout: 10m0s
-          unhealthyConditions:
-          - type: Ready
-            status: Unknown
-            timeout: 3m0s
-          - type: Ready
-            status: "False"
-            timeout: 3m0s
+      # Multi-pool worker config.
+      # Each entry under `pools` becomes its own MachineDeployment + HCloudMachineTemplate + KubeadmConfigTemplate (+ MachineHealthCheck).
+      # `defaults` is merged into every pool; per-pool fields win.
+      workers:
+        defaults:
+          osVersion: "" # e.g. "2404"
+          k8sVersion: "" # e.g. "v1.31.4"
+          imageName: ""
+          # If autoscaler is enabled, replicas is in effect only until autoscaler is active, e.g. during bootstrap of the cluster.
+          replicas: 3
+          # If autoscaler is enabled, replicas must be ignored by ArgoCD.
+          autoscaler:
+            # Adds annotations to MachineDeployment for Kubernetes Autoscaler (https://github.com/kubernetes/autoscaler).
+            enabled: false
+            minSize: ""
+            maxSize: ""
+          healthCheck:
+            enabled: true
+            maxUnhealthy: 100%
+            nodeStartupTimeout: 10m0s
+            unhealthyConditions:
+            - type: Ready
+              status: Unknown
+              timeout: 3m0s
+            - type: Ready
+              status: "False"
+              timeout: 3m0s
+        pools: {}
+        # pools:
+        #   # The pool named "default" renders with un-suffixed resource names (`<cluster>-worker`) so it lines up with the legacy `machines.worker:` block.
+        #   default: {}
 
     hCloud:
       # https://syself.com/docs/caph/topics/managing-ssh-keys
@@ -94,9 +102,8 @@ exports:
         # Secret itself from `value` below; the token then lives in plaintext in
         # your values.yaml, Helm release secret, and any rendered diff.
         existingSecret: true
-        # Token value used only when `existingSecret: false`. Emitted via
-        # `stringData` (Helm doesn't encrypt this — kube-apiserver base64-encodes
-        # server-side).
+        # Token value used only when `existingSecret: false`.
+        # Emitted via stringData (Helm doesn't encrypt this — kube-apiserver base64-encodes server-side).
         value: ""
         # Name of the Secret (referenced when existingSecret: true, created when false).
         secretName: "hcloud"
@@ -172,17 +179,25 @@ exports:
             # ref: https://cluster-api.sigs.k8s.io/tasks/automated-machine-management/healthchecking#what-is-a-machinehealthcheck
             # Type represents the type of the remediation strategy. At the moment, only "Reboot" is supported.
             type: Reboot
-        worker:
-          # Server types: https://www.hetzner.com/cloud
-          type: "" # e.g. cpx42
-          placementGroupName: worker
-          remediation:
-            # Disable HCloudRemediationTemplate and rely on default remediation
-            # which should trigger a new Machine to be created to replace the failed one.
-            enabled: false
-            retryLimit: 3
-            timeout: 3m0s
-            type: Reboot
+        # Multi-pool hcloud worker config.
+        # Keys must match keys under `machines.workers.pools`.
+        # Merged with `defaults` below before being merged into the matching pool from `machines.workers.pools`.
+        workers:
+          defaults:
+            # Server types: https://www.hetzner.com/cloud
+            type: "" # e.g. cpx42
+            placementGroupName: worker
+            remediation:
+              # Disable HCloudRemediationTemplate and rely on default remediation
+              # which should trigger a new Machine to be created to replace the failed one.
+              enabled: false
+              retryLimit: 3
+              timeout: 3m0s
+              type: Reboot
+          pools: {}
+          # pools:
+          #   # The pool named "default" renders with un-suffixed resource names (`<cluster>-worker`) so it lines up with the legacy `hCloud.machines.worker:` block.
+          #   default: {}
 
     # To write custom config into /etc/kubernetes/ in CP nodes.
     etcKubernetes:

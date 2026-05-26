@@ -81,7 +81,7 @@ Merge hCloud.networking with networking. hCloud.networking overwrites.
 */}}
 {{- define "networking" -}}
   {{- if eq .Values.capi.providers.infrastructure.name "hetzner" }}
-  {{- mustMergeOverwrite .Values.networking .Values.hCloud.networking | toYaml }}
+  {{- mustMergeOverwrite (deepCopy .Values.networking) .Values.hCloud.networking | toYaml }}
   {{- end }}
 {{- end }}
 
@@ -90,7 +90,7 @@ Merge hCloud.machines with machines. hCloud.machines overwrites.
 */}}
 {{- define "machines" -}}
   {{- if eq .Values.capi.providers.infrastructure.name "hetzner" }}
-  {{- mustMergeOverwrite .Values.machines .Values.hCloud.machines | toYaml }}
+  {{- mustMergeOverwrite (deepCopy .Values.machines) .Values.hCloud.machines | toYaml }}
   {{- end }}
 {{- end }}
 
@@ -106,8 +106,23 @@ Merge hCloud.machines with machines. hCloud.machines overwrites.
 {{- printf "%s-cp" (include "cluster-name" .) }}
 {{- end }}
 
-{{- define "worker-name" -}}
-{{- printf "%s-worker" (include "cluster-name" .) }}
+{{/*
+worker-name renders the base name shared by a pool's MachineDeployment,
+HCloudMachineTemplate, KubeadmConfigTemplate, MachineHealthCheck, and the
+`nodepool` label.
+The pool named "default" is intentionally un-suffixed so it
+matches the legacy single-pool name `<cluster>-worker`. This is what makes
+migrating `machines.worker` → `machines.workers.pools.default` a no-op.
+
+Accepts a {root, poolName, poolSpec} dict (per-pool helper call sites).
+NOTE: poolSpec is not used by this helper.
+*/}}
+{{- define "worker-pool-name" -}}
+{{- if eq .poolName "default" -}}
+{{- printf "%s-worker" (include "cluster-name" .root) -}}
+{{- else -}}
+{{- printf "%s-worker-%s" (include "cluster-name" .root) .poolName -}}
+{{- end -}}
 {{- end }}
 
 {{- define "cp-hcloud-machine-template-spec" -}}
@@ -135,28 +150,87 @@ capi/k8sVersion: {{ $machines.cp.k8sVersion | required "ERROR: CP k8sVersion is 
 capi/imageName: {{ tpl ($machines.cp.imageName | required "ERROR: CP imageName is required.") . | quote }}
 {{- end }}
 
+{{/*
+cluster.workerPools returns a YAML map `{ <pool-name>: <merged-pool-spec> }`
+that callers iterate over to render per-pool MachineDeployment, templates and MHC resources.
+It accepts machines.workers.{defaults,pools} + hCloud.machines.workers.{defaults,pools}.
+*/}}
+{{- define "cluster.workerPools" -}}
+{{- /* First get machine defaults and pools */}}
+{{- $defaults := (.Values.machines.workers.defaults | default dict) -}}
+{{- $pools := (.Values.machines.workers.pools | default dict) -}}
+{{- /* Prepare merged output */}}
+{{- $out := dict -}}
+{{- /* Get hetzner cloud defaults and pools, and merge. */}}
+{{- if eq .Values.capi.providers.infrastructure.name "hetzner" -}}
+{{- $hcDefaults := (.Values.hCloud.machines.workers.defaults | default dict) -}}
+{{- $hcPools := (.Values.hCloud.machines.workers.pools | default dict) -}}
+{{- $mergedDefaults := mustMergeOverwrite (deepCopy $defaults) $hcDefaults -}}
+{{- $allKeys := keys $pools | concat (keys $hcPools) | uniq -}}
+{{- range $k := $allKeys -}}
+  {{- $p := (index $pools $k) | default dict -}}
+  {{- $hcp := (index $hcPools $k) | default dict -}}
+  {{- $poolMerged := mustMergeOverwrite (deepCopy $mergedDefaults) $p $hcp -}}
+  {{- $_ := set $out $k $poolMerged -}}
+{{- end -}}
+{{- /* Validate worker pool names length */}}
+{{- $cluster := include "cluster-name" . -}}
+{{- range $k, $_ := $out -}}
+  {{- $base := "" -}}
+  {{- if eq $k "default" -}}
+    {{- $base = printf "%s-worker" $cluster -}}
+  {{- else -}}
+    {{- $base = printf "%s-worker-%s" $cluster $k -}}
+  {{- end -}}
+  {{- if gt (int (add (len $base) 17)) 63 -}}
+    {{- fail (printf "worker pool %q produces resource name %q which exceeds 63 chars once the 17-char spec-hash suffix is appended; shorten the cluster name or pool name" $k $base) -}}
+  {{- end -}}
+{{- end -}}
+{{- end -}}
+{{- $out | toYaml -}}
+{{- end }}
+
+{{/*
+worker-hcloud-machine-template-spec renders the HCloudMachineTemplate.spec.template.spec
+for a single pool. Accepts a {root, poolName, poolSpec} dict where:
+  - .root is the chart root context (for `tpl` and required-key errors)
+  - .poolName is the pool key (used only in error messages)
+  - .poolSpec is the merged pool spec from `cluster.workerPools`
+*/}}
 {{- define "worker-hcloud-machine-template-spec" -}}
-{{- $machines := (include "machines" .) | fromYaml -}}
 publicNetwork:
   enableIPv4: true
   enableIPv6: false
-imageName: {{ tpl ($machines.worker.imageName | required "ERROR: worker imageName is required.") . }}
-placementGroupName: {{ $machines.worker.placementGroupName }}
-type: {{ $machines.worker.type | required "ERROR: worker type is required." }}
+imageName: {{ tpl (.poolSpec.imageName | required (printf "ERROR: worker pool %q imageName is required." .poolName)) .root }}
+placementGroupName: {{ .poolSpec.placementGroupName }}
+type: {{ .poolSpec.type | required (printf "ERROR: worker pool %q type is required." .poolName) }}
 {{- end }}
+{{/*
+Accepts a {root, poolName, poolSpec} dict (per-pool helper call sites).
+*/}}
 {{- define "worker-hcloud-machine-template-name" -}}
-{{- printf "%s-%s" (include "worker-name" .) ((include "worker-hcloud-machine-template-spec" .) | sha256sum | trunc 16) }}
+{{- printf "%s-%s" (include "worker-pool-name" .) ((include "worker-hcloud-machine-template-spec" .) | sha256sum | trunc 16) }}
 {{- end }}
+{{/*
+Accepts a {root, poolName, poolSpec} dict (per-pool helper call sites).
+*/}}
 {{- define "worker-hcloud-machine-template-labels" -}}
-{{- $machines := (include "machines" .) | fromYaml -}}
-{{- with $machines.worker.osVersion -}}
+{{- with .poolSpec.osVersion -}}
 capi/osVersion: {{ . | quote }}
 {{- end }}
-capi/k8sVersion: {{ $machines.worker.k8sVersion | required "ERROR: Worker node k8sVersion is required" | quote }}
-capi/imageName: {{ tpl ($machines.worker.imageName | required "ERROR: worker imageName is required.") . | quote }}
+capi/k8sVersion: {{ .poolSpec.k8sVersion | required (printf "ERROR: worker pool %q k8sVersion is required" .poolName) | quote }}
+capi/imageName: {{ tpl (.poolSpec.imageName | required (printf "ERROR: worker pool %q imageName is required." .poolName)) .root | quote }}
 {{- end }}
 
+{{/*
+worker-kubeadm-config-template-spec renders the KubeadmConfigTemplate body.
+The body is currently identical across pools (no per-pool kubelet overrides).
+
+Accepts a {root, poolName, poolSpec} dict (per-pool helper call sites).
+NOTE: poolName and poolSpec is not used by this helper.
+*/}}
 {{- define "worker-kubeadm-config-template-spec" -}}
+{{- with .root -}}
 joinConfiguration:
   nodeRegistration:
     criSocket: unix:///var/run/containerd/containerd.sock
@@ -270,8 +344,12 @@ files:
 {{- end }}
 */}}
 {{- end }}
+{{- end }}
+{{/*
+Accepts a {root, poolName, poolSpec} dict (per-pool helper call sites).
+*/}}
 {{- define "worker-kubeadm-config-template-name" -}}
-{{- printf "%s-%s" (include "worker-name" .) ((include "worker-kubeadm-config-template-spec" .) | sha256sum | trunc 16) }}
+{{- printf "%s-%s" (include "worker-pool-name" .) ((include "worker-kubeadm-config-template-spec" .) | sha256sum | trunc 16) }}
 {{- end }}
 
 {{/* Trim a version like "v1.31.4" to "v1.31" */}}

@@ -43,49 +43,57 @@ spec:
       cluster.x-k8s.io/control-plane: ""
   unhealthyConditions: {{- $machines.cp.healthCheck.unhealthyConditions | toYaml | nindent 2 }}
 {{- end }}
-{{- if $machines.worker.healthCheck.enabled }}
-{{- if and (eq .Values.capi.providers.infrastructure.name "hetzner") $machines.worker.remediation.enabled }}
+{{- /* Worker nodes */}}
+{{- $root := . }}
+{{- $workerPools := (include "cluster.workerPools" .) | fromYaml }}
+{{- range $poolName, $poolSpec := $workerPools }}
+{{- $ctx := dict "root" $root "poolName" $poolName "poolSpec" $poolSpec }}
+{{- $remediationName := "" }}
+{{- if eq $poolName "default" -}}{{- $remediationName = "worker-remediation" -}}{{- else -}}{{- $remediationName = printf "worker-%s-remediation" $poolName -}}{{- end }}
+{{- if $poolSpec.healthCheck.enabled }}
+{{- if and (eq $root.Values.capi.providers.infrastructure.name "hetzner") $poolSpec.remediation.enabled }}
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: HCloudRemediationTemplate
 metadata:
-  name: worker-remediation
-  namespace: {{ .Release.Namespace }}
+  name: {{ $remediationName }}
+  namespace: {{ $root.Release.Namespace }}
   labels:
-    {{- include "cluster.labels" . | nindent 4 }}
+    {{- include "cluster.labels" $root | nindent 4 }}
 spec:
   template:
     spec:
       strategy:
-        retryLimit: {{ $machines.worker.remediation.retryLimit }}
-        timeout: {{ $machines.worker.remediation.timeout }}
-        type: {{ $machines.worker.remediation.type }}
+        retryLimit: {{ $poolSpec.remediation.retryLimit }}
+        timeout: {{ $poolSpec.remediation.timeout }}
+        type: {{ $poolSpec.remediation.type }}
 {{- end }}
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineHealthCheck
 metadata:
-  name: {{ include "cluster-name" . }}-worker-unhealthy
-  namespace: {{ .Release.Namespace }}
+  name: {{ include "worker-pool-name" $ctx }}-unhealthy
+  namespace: {{ $root.Release.Namespace }}
   # annotations:
   #   argocd.argoproj.io/sync-wave: ""
   labels:
-    {{- include "cluster.labels" . | nindent 4 }}
+    {{- include "cluster.labels" $root | nindent 4 }}
 spec:
-  clusterName: {{ include "cluster-name" . }}
-  maxUnhealthy: {{ $machines.worker.healthCheck.maxUnhealthy }}
-  nodeStartupTimeout: {{ $machines.worker.healthCheck.nodeStartupTimeout }}
-  {{- if $machines.worker.remediation.enabled }}
+  clusterName: {{ include "cluster-name" $root }}
+  maxUnhealthy: {{ $poolSpec.healthCheck.maxUnhealthy }}
+  nodeStartupTimeout: {{ $poolSpec.healthCheck.nodeStartupTimeout }}
+  {{- if $poolSpec.remediation.enabled }}
   remediationTemplate:
-    {{- if eq .Values.capi.providers.infrastructure.name "hetzner" }}
+    {{- if eq $root.Values.capi.providers.infrastructure.name "hetzner" }}
     apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
     kind: HCloudRemediationTemplate
     {{- end }}
-    name: worker-remediation
+    name: {{ $remediationName }}
   {{- end }}
   selector:
     matchLabels:
-      nodepool: {{ include "worker-name" . }}
-  unhealthyConditions: {{- $machines.worker.healthCheck.unhealthyConditions | toYaml | nindent 2 }}
+      nodepool: {{ include "worker-pool-name" $ctx }}
+  unhealthyConditions: {{- $poolSpec.healthCheck.unhealthyConditions | toYaml | nindent 2 }}
+{{- end }}
 {{- end }}
 {{- end -}}

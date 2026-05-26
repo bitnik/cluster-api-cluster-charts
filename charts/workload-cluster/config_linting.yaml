@@ -14,18 +14,34 @@ hCloud:
       # k8sVersion: "v1.31.4"
       buildTimestamp: "1744781328"
       # replicas: 3
-    worker:
-      type: "cpx42"
-      # osVersion: "2404"
-      # k8sVersion: "v1.31.4"
-      buildTimestamp: "1744781328"
-      # replicas: 3
-      replicas: 7
-      autoscaler:
-        # minSize: "3"
-        # maxSize: "4"
-        minSize: "7"
-        maxSize: "9"
+    workers:
+      defaults:
+        type: "cpx42"
+        # osVersion: "2404"
+        # k8sVersion: "v1.31.4"
+        buildTimestamp: "1744781328"
+        # replicas: 3
+        replicas: 7
+        autoscaler:
+          # minSize: "3"
+          # maxSize: "4"
+          minSize: "7"
+          maxSize: "9"
+      pools:
+        gpu:
+          type: "x"
+          placementGroupName: worker-gpu
+          osVersion: "2404"
+          k8sVersion: "v1.32.4"
+          buildTimestamp: "123456"
+          imageName: >-
+            {{- $machines := (include "machines" $) | fromYaml -}}
+            cluster-api-ubuntu-{{ $machines.workers.pools.gpu.osVersion }}-{{ $machines.workers.pools.gpu.k8sVersion }}-{{ $machines.workers.pools.gpu.buildTimestamp | required "ERROR: worker image buildTimestamp is required." }}
+          replicas: 1
+          autoscaler:
+            enabled: true
+            minSize: "1"
+            maxSize: "2"
 
 install:
   # enabled: false
