@@ -3,10 +3,10 @@ apiVersion: v2
 name: example-workload-cluster
 description: An example umbrella chart for a workload (k8s) cluster.
 type: application
-version: 0.10.1
+version: 0.11.0
 dependencies:
 - name: cluster
-  version: 0.10.1
+  version: 0.11.0
   repository: file://../cluster
   import-values:
   - data

@@ -21,9 +21,15 @@ hCloud:
       osVersion: "2404"
       k8sVersion: "v1.31.4"
       imageName: "cluster-api-ubuntu-2404-v1.31.4-<timestamp>"
-    worker:
-      osVersion: "2404"
-      k8sVersion: "v1.31.4"
-      imageName: "cluster-api-ubuntu-2404-v1.31.4-<timestamp>"
+    workers:
+      defaults:
+        osVersion: "2404"
+        k8sVersion: "v1.31.4"
+        imageName: "cluster-api-ubuntu-2404-v1.31.4-<timestamp>"
+      pools:
+        default: {}
+        gpu:
+          type: "x"
+          placementGroupName: worker-gpu
 install:
   k8sVersion: "v1.31.4"

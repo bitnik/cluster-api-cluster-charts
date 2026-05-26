@@ -1,7 +1,10 @@
 {{- define "cluster.worker-nodes" -}}
+{{- $root := . }}
 {{- $networking := (include "networking" .) | fromYaml }}
-{{- $machines := (include "machines" .) | fromYaml }}
-{{- if eq .Values.capi.providers.infrastructure.name "hetzner" }}
+{{- $workerPools := (include "cluster.workerPools" .) | fromYaml }}
+{{- range $poolName, $poolSpec := $workerPools }}
+{{- $ctx := dict "root" $root "poolName" $poolName "poolSpec" $poolSpec }}
+{{- if eq $root.Values.capi.providers.infrastructure.name "hetzner" }}
 ---
 {{/*
 https://syself.com/docs/caph/reference/hcloud-machine-template
@@ -9,26 +12,26 @@ https://syself.com/docs/caph/reference/hcloud-machine-template
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: HCloudMachineTemplate
 metadata:
-  name: {{ include "worker-hcloud-machine-template-name" . }}
-  namespace: {{ .Release.Namespace }}
+  name: {{ include "worker-hcloud-machine-template-name" $ctx }}
+  namespace: {{ $root.Release.Namespace }}
   labels:
-    {{- include "cluster.labels" . | nindent 4 }}
-    {{- include "worker-hcloud-machine-template-labels" . | nindent 4 }}
+    {{- include "cluster.labels" $root | nindent 4 }}
+    {{- include "worker-hcloud-machine-template-labels" $ctx | nindent 4 }}
   annotations:
     argocd.argoproj.io/sync-wave: "-5"
 spec:
   template:
-    spec: {{- include "worker-hcloud-machine-template-spec" . | nindent 6 }}
+    spec: {{- include "worker-hcloud-machine-template-spec" $ctx | nindent 6 }}
 {{- end }}
-{{- if eq .Values.capi.providers.bootstrap.name "kubeadm" }}
+{{- if eq $root.Values.capi.providers.bootstrap.name "kubeadm" }}
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate
 metadata:
-  name: {{ include "worker-kubeadm-config-template-name" . }}
-  namespace: {{ .Release.Namespace }}
+  name: {{ include "worker-kubeadm-config-template-name" $ctx }}
+  namespace: {{ $root.Release.Namespace }}
   labels:
-    {{- include "cluster.labels" . | nindent 4 }}
+    {{- include "cluster.labels" $root | nindent 4 }}
 spec:
   template:
     {{- /*
@@ -37,30 +40,30 @@ spec:
     # k explain KubeadmConfigTemplate.spec.template.spec
     # NOTE: KubeadmConfigTemplate.spec.template.spec = KubeadmControlPlane.spec.kubeadmConfigSpec
     */}}
-    spec: {{- include "worker-kubeadm-config-template-spec" . | nindent 6 }}
+    spec: {{- include "worker-kubeadm-config-template-spec" $ctx | nindent 6 }}
 {{- end }}
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
 metadata:
-  name: {{ include "worker-name" . }}
-  namespace: {{ .Release.Namespace }}
+  name: {{ include "worker-pool-name" $ctx }}
+  namespace: {{ $root.Release.Namespace }}
   labels:
-    nodepool: {{ include "worker-name" . }}
-    {{- include "cluster.labels" . | nindent 4 }}
-  {{- if $machines.worker.autoscaler.enabled }}
+    nodepool: {{ include "worker-pool-name" $ctx }}
+    {{- include "cluster.labels" $root | nindent 4 }}
+  {{- if $poolSpec.autoscaler.enabled }}
   annotations:
     cluster.x-k8s.io/cluster-api-autoscaler-enabled: "true"
-    cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size: "{{ $machines.worker.autoscaler.minSize }}"
-    cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size: "{{ $machines.worker.autoscaler.maxSize }}"
+    cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size: "{{ $poolSpec.autoscaler.minSize }}"
+    cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size: "{{ $poolSpec.autoscaler.maxSize }}"
   {{- end }}
 spec:
-  clusterName: {{ include "cluster-name" . }}
-  replicas: {{ $machines.worker.replicas }}
+  clusterName: {{ include "cluster-name" $root }}
+  replicas: {{ $poolSpec.replicas }}
   selector:
     matchLabels:
-      nodepool: {{ include "worker-name" . }}
-      # cluster.x-k8s.io/cluster-name: {{ include "cluster-name" . }}
+      nodepool: {{ include "worker-pool-name" $ctx }}
+      # cluster.x-k8s.io/cluster-name: {{ include "cluster-name" $root }}
   {{- /*
   # strategy:
   #   remediation:
@@ -73,25 +76,26 @@ spec:
   template:
     metadata:
       labels:
-        nodepool: {{ include "worker-name" . }}
-        # cluster.x-k8s.io/cluster-name: {{ include "cluster-name" . }}
+        nodepool: {{ include "worker-pool-name" $ctx }}
+        # cluster.x-k8s.io/cluster-name: {{ include "cluster-name" $root }}
     spec:
       bootstrap:
         configRef:
-          {{- if eq .Values.capi.providers.bootstrap.name "kubeadm" }}
+          {{- if eq $root.Values.capi.providers.bootstrap.name "kubeadm" }}
           apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
           kind: KubeadmConfigTemplate
-          name: {{ include "worker-kubeadm-config-template-name" . }}
+          name: {{ include "worker-kubeadm-config-template-name" $ctx }}
           {{- end }}
-          namespace: {{ .Release.Namespace }}
-      clusterName: {{ include "cluster-name" . }}
+          namespace: {{ $root.Release.Namespace }}
+      clusterName: {{ include "cluster-name" $root }}
       failureDomain: {{ $networking.region | required "ERROR: networking region is required." }}
       infrastructureRef:
-        {{- if eq .Values.capi.providers.infrastructure.name "hetzner" }}
+        {{- if eq $root.Values.capi.providers.infrastructure.name "hetzner" }}
         apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
         kind: HCloudMachineTemplate
         {{- end }}
-        name: {{ include "worker-hcloud-machine-template-name" . }}
-        namespace: {{ .Release.Namespace }}
-      version: {{ $machines.worker.k8sVersion | required "ERROR: Worker node k8sVersion is required" }}
+        name: {{ include "worker-hcloud-machine-template-name" $ctx }}
+        namespace: {{ $root.Release.Namespace }}
+      version: {{ $poolSpec.k8sVersion | required (printf "ERROR: worker pool %q k8sVersion is required" $poolName) }}
+{{- end }}
 {{- end -}}
