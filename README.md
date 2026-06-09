@@ -103,12 +103,54 @@ This repository intentionally does **not** include:
 
 Such charts belong in separate, dedicated repositories (e.g. platform add-ons).
 
-## Local Developmemt
+## Development
 
-To run yamlfmt locally:
+Common tasks are wrapped in a [`justfile`](https://just.systems/).
+Run `just` with no arguments to list available recipes.
+
+### Linting
 
 ```sh
-yamlfmt "**/*.{yaml,yml,yamlfmt}"
-# Or remove -quiet and/or -lint flag of yamlfmt in .pre-commit-config.yaml and run
-pre-commit run --all-files
+# yamlfmt across the repo
+just fmt
+# pre-commit run --all-files (requires an activated python venv)
+just pre-commit
+# mirrors .github/workflows/lint.yaml: library chart + all app/helper charts
+just lint
+# just the cluster library chart
+just lint-cluster
+# one chart by its path under charts/
+just lint-chart workload-cluster
+just lint-chart helpers/eso-secrets
 ```
+
+When linting fails,
+
+```sh
+# Let's say failing chart is workload-cluster,
+# run linting in verbose mode to see the diffs
+just exec just _lint-chart workload-cluster true
+```
+
+### devcontainer
+
+Config: [.devcontainer/devcontainer.json](.devcontainer/devcontainer.json)
+
+```sh
+# Start a bash shell inside the devcontainer.
+just bash
+# Stop and remove the devcontainer.
+just destroy
+# Start Claude Code inside the devcontainer.
+just code
+# Run an arbitrary command inside the devcontainer.
+just exec +CMD
+```
+
+Refs:
+* https://containers.dev
+* https://code.claude.com/docs/en/sandbox-environments#dev-containers
+  * https://code.claude.com/docs/en/devcontainer
+  * https://github.com/anthropics/claude-code/tree/main/.devcontainer
+* https://zed.dev/docs/dev-containers
+* https://code.visualstudio.com/docs/devcontainers/containers
