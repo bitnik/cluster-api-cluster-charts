@@ -5,11 +5,21 @@ on:
   pull_request:
     paths:
     - "charts/**"
+    - ".devcontainer/Dockerfile"
+    - ".github/workflows/lint.yaml"
+    - "justfile"
+    - ".yamlfmt"
+    - ".pre-commit-config.yaml"
   push:
     branches:
     - main
     paths:
     - "charts/**"
+    - ".devcontainer/Dockerfile"
+    - ".github/workflows/lint.yaml"
+    - "justfile"
+    - ".yamlfmt"
+    - ".pre-commit-config.yaml"
   workflow_dispatch:
 
 jobs:
@@ -22,75 +32,26 @@ jobs:
       with:
         fetch-depth: 0
 
-    # # https://github.com/actions/setup-python
-    # - name: Set up python
-    #   uses: actions/setup-python@v6.1.0
-    #   with:
-    #     python-version: "3.13"
+    # https://github.com/docker/setup-buildx-action
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
 
-    # https://github.com/Azure/setup-helm
-    - name: Set up Helm
-      uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+    # https://github.com/docker/build-push-action
+    - name: Build lint image
+      uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
       with:
-        version: "latest"
+        context: .devcontainer
+        target: base
+        # load into the local Docker daemon so it can be used by `docker run`
+        load: true
+        tags: cluster-api-cluster-charts-lint:ci
+        cache-from: type=gha,scope=lint
+        cache-to: type=gha,scope=lint,mode=max
 
-    - name: Install yamlfmt
-      # TODO renovate yamlfmt. It must be updated together with version in pre-commit
+    - name: Lint charts
       run: |
-        go install github.com/google/yamlfmt/cmd/yamlfmt@v0.21.0
-        echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
-        export PATH="$(go env GOPATH)/bin:$PATH"
-        yamlfmt -version
-
-    - name: Lint cluster
-      run: |
-        helm dependency update charts/cluster
-        helm lint charts/cluster
-
-    - name: Lint example-workload-cluster
-      run: |
-        helm dependency update charts/example-workload-cluster
-        helm lint charts/example-workload-cluster -f charts/example-workload-cluster/config_linting.yaml
-        helm template charts/example-workload-cluster -f charts/example-workload-cluster/config_linting.yaml --output-dir /tmp/example-workload-cluster-linting-output
-        yamlfmt -conf=./.yamlfmt -lint -quiet "/tmp/example-workload-cluster-linting-output/**/*.{yaml,yml}"
-        rm -rf /tmp/example-workload-cluster-linting-output
-
-    - name: Lint management-cluster
-      run: |
-        helm dependency update charts/management-cluster
-        helm lint charts/management-cluster -f charts/management-cluster/config_linting.yaml
-        helm template charts/management-cluster -f charts/management-cluster/config_linting.yaml --output-dir /tmp/management-cluster-linting-output
-        yamlfmt -conf=./.yamlfmt -lint -quiet "/tmp/management-cluster-linting-output/**/*.{yaml,yml}"
-        rm -rf /tmp/management-cluster-linting-output
-
-    - name: Lint workload-cluster
-      run: |
-        helm dependency update charts/workload-cluster
-        helm lint charts/workload-cluster -f charts/workload-cluster/config_linting.yaml
-        helm template charts/workload-cluster -f charts/workload-cluster/config_linting.yaml --output-dir /tmp/workload-cluster-linting-output
-        yamlfmt -conf=./.yamlfmt -lint -quiet "/tmp/workload-cluster-linting-output/**/*.{yaml,yml}"
-        rm -rf /tmp/workload-cluster-linting-output
-
-    - name: Lint cluster-bootstrap-configs
-      run: |
-        helm dependency update charts/helpers/cluster-bootstrap-configs
-        helm lint charts/helpers/cluster-bootstrap-configs -f charts/helpers/cluster-bootstrap-configs/config_linting.yaml
-        helm template charts/helpers/cluster-bootstrap-configs -f charts/helpers/cluster-bootstrap-configs/config_linting.yaml --output-dir /tmp/helpers/cluster-bootstrap-configs-linting-output
-        yamlfmt -conf=./.yamlfmt -lint -quiet "/tmp/helpers/cluster-bootstrap-configs-linting-output/**/*.{yaml,yml}"
-        rm -rf /tmp/helpers/cluster-bootstrap-configs-linting-output
-
-    - name: Lint eso-providers
-      run: |
-        helm dependency update charts/helpers/eso-providers
-        helm lint charts/helpers/eso-providers -f charts/helpers/eso-providers/config_linting.yaml
-        helm template charts/helpers/eso-providers -f charts/helpers/eso-providers/config_linting.yaml --output-dir /tmp/helpers/eso-providers-linting-output
-        yamlfmt -conf=./.yamlfmt -lint -quiet "/tmp/helpers/eso-providers-linting-output/**/*.{yaml,yml}"
-        rm -rf /tmp/helpers/eso-providers-linting-output
-
-    - name: Lint eso-secrets
-      run: |
-        helm dependency update charts/helpers/eso-secrets
-        helm lint charts/helpers/eso-secrets -f charts/helpers/eso-secrets/config_linting.yaml
-        helm template charts/helpers/eso-secrets -f charts/helpers/eso-secrets/config_linting.yaml --output-dir /tmp/helpers/eso-secrets-linting-output
-        yamlfmt -conf=./.yamlfmt -lint -quiet "/tmp/helpers/eso-secrets-linting-output/**/*.{yaml,yml}"
-        rm -rf /tmp/helpers/eso-secrets-linting-output
+        docker run --rm \
+          -v "$GITHUB_WORKSPACE:/workspace" \
+          -w /workspace \
+          cluster-api-cluster-charts-lint:ci \
+          just _lint
