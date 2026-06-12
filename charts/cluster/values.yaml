@@ -2,6 +2,7 @@
 exports:
   data:
     capi:
+      # See Compatibility documentation in README
       providers:
         core:
           name: cluster-api
@@ -32,7 +33,7 @@ exports:
         imageName: ""
         replicas: 3
         # https://cluster-api.sigs.k8s.io/tasks/automated-machine-management/healthchecking
-        # https://doc.crds.dev/github.com/kubernetes-sigs/cluster-api/cluster.x-k8s.io/MachineHealthCheck/v1beta1@v1.8.5
+        # https://doc.crds.dev/github.com/kubernetes-sigs/cluster-api/cluster.x-k8s.io/MachineHealthCheck/v1beta1@v1.8.12
         healthCheck:
           enabled: true
           # maxUnhealthy prevents further remediation if the cluster is already partially unhealthy.
