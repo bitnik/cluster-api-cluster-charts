@@ -4,7 +4,7 @@
 {{- $networking := (include "networking" .) | fromYaml }}
 {{- $machines := (include "machines" .) | fromYaml }}
 {{- /*
-https://doc.crds.dev/github.com/kubernetes-sigs/cluster-api/cluster.x-k8s.io/Cluster/v1beta1@v1.8.5
+https://doc.crds.dev/github.com/kubernetes-sigs/cluster-api/cluster.x-k8s.io/Cluster/v1beta1@v1.8.12
 */}}
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster

@@ -38,6 +38,8 @@ These charts define the primary infrastructure and Cluster API specifications.
 The `cluster` library chart is designed to be reusable outside of unbyte-specific setups,
 while the application charts provide opinionated defaults used by unbyte.
 
+See the [compatibility documentation](charts/cluster/README.md#compatibility) for supported versions.
+
 | Chart Name | Type | Description |
 | :--- | :--- | :--- |
 | `cluster` | library | **Base library** providing standardized templates and schemas for Cluster API resources. |
