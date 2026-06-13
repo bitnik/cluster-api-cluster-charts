@@ -408,7 +408,7 @@ exports:
           repoUrl: https://charts.hetzner.cloud
           chart: hcloud-cloud-controller-manager
           releaseName: hccm
-          version: 1.26.0
+          version: 1.32.0
           namespace: kube-system
           createNamespace: false
           secretsCount: 1
