@@ -27,14 +27,19 @@ and the [Cluster API version support](https://cluster-api.sigs.k8s.io/reference/
 
 This chart is currently tested against:
 
-| Component | Version | Notes |
+<!--| Component | Version | Notes |
 |-----------|---------|-------|
 | Core provider (CAPI) | `v1.8.12` | apiVersion served: `v1beta1`, CAPI contract: `v1beta1` |
 | Bootstrap provider (kubeadm) | `v1.8.12` | ships with CAPI |
 | Control-plane provider (kubeadm) | `v1.8.12` | ships with CAPI |
 | Infrastructure provider (CAPH) | `v1.0.7` | apiVersion: `v1beta1`, contract: `v1beta1` |
 | Node OS image | `Ubuntu 24.04` | `osVersion: "2404"` |
-| Kubernetes (node image) | `v1.31.4` | set via `k8sVersion` in the chart |
+| Kubernetes (node image) | `v1.31.4` | set via `k8sVersion` in the chart |-->
+
+| Cluster chart version | Core provider (CAPI) | Bootstrap provider | Control-plane provider | Infrastructure provider | Node OS image | Kubernetes (node image) | Notes |
+|-----------|---------|---------|-----------|--------------|-------|-------|-------------------------|
+| `1.11.1` | `v1.8.12` | kubeadm: `v1.8.12` | kubeadm: `v1.8.12` | CAPH: `v1.0.7` | Ubuntu 24.04 | 1.31.4 | |
+| `1.12.0` | `v1.10.10` | kubeadm: `v1.10.10` | kubeadm: `v1.10.10` | CAPH: `v1.0.12` | Ubuntu 24.04 | 1.33.12 | Requires a [manual RBAC fix](https://github.com/kubernetes-sigs/cluster-api/blob/6c70a17c7f343442238fc695e66884e6c84cfa01/docs/book/src/user/troubleshooting.md#kubeadm-join-fails-after-upgrading-to-kubernetes-patch-releases) |
 
 `cilium` or `hcloud-cloud-controller-manager` versions,installed via `ClusterResourceSet`, are independent of providers.
 <!--| hcloud-cloud-controller-manager (chart) | `1.26.0` | independent of CAPI, CAPH |-->
@@ -50,7 +55,11 @@ Therefore, this chart is currently compatible with CAPH `v1.0.x` and CAPI `v1.8.
 | CAPI `v1.12.x - v1.15.x` and CAPH [`v1.1.x`](https://github.com/syself/cluster-api-provider-hetzner/releases/tag/v1.1.0) | core v1beta1+v1beta2; CAPH v1beta1 | v1beta2 <-> v1beta1 (bridged by temporary shim) | Optionally migrate only CAPI resources (Cluster, KubeadmControlPlane, MachineDeployment) to v1beta2 | Works via shim (next step) |
 | CAPI `>= v1.12.x` and CAPH `v1.2.x` | v1beta2 | v1beta2 <-> v1beta2 | Migrate all resources to v1beta2 | Fully aligned. This is the destination, but CAPH `v1.2.x` not released yet. |
 
-For Kubernetes version support, check the [CAPH compatibility matrix](https://syself.com/docs/caph/getting-started/introduction#compatibility-with-cluster-api-and-kubernetes-versions) (pay attention to compatibility notes).
+For Kubernetes version support
+
+* check the [CAPH compatibility matrix](https://syself.com/docs/caph/getting-started/introduction#compatibility-with-cluster-api-and-kubernetes-versions) (pay attention to compatibility notes)
+* check CAPI release notes, e.g. for [v1.10.10](https://github.com/kubernetes-sigs/cluster-api/releases/tag/v1.10.10)
+* check containerd's kubernetes version support: https://containerd.io/releases/#kubernetes-support
 
 References:
 
