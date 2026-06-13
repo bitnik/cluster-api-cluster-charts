@@ -82,7 +82,6 @@ spec:
           {{- end }}
           authorization-mode: Node,RBAC
           client-ca-file: /etc/kubernetes/pki/ca.crt
-          cloud-provider: external
           default-not-ready-toleration-seconds: {{ .Values.kubeadm.kubeApiServer.defaultNotReadyTolerationSeconds | quote }}
           default-unreachable-toleration-seconds: {{ .Values.kubeadm.kubeApiServer.defaultUnreachableTolerationSeconds | quote }}
           enable-aggregator-routing: "true"
@@ -172,7 +171,6 @@ spec:
           # If we set it to 127.0.0.1, then livenessProbe/startupProbe.httpGet.host is set to 127.0.0.1 too and so we have to replace it too.
           # This is configured to node IP in postKubeadmCommands.
           bind-address: 0.0.0.0
-          cloud-provider: external
           cluster-signing-cert-file: /etc/kubernetes/pki/ca.crt
           cluster-signing-duration: 2160h0m0s # 90 days. Default is 8760h0m0s (1 year).
           cluster-signing-key-file: /etc/kubernetes/pki/ca.key
