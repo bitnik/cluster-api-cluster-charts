@@ -22,7 +22,7 @@ spec:
 {{- end }}
 {{- if eq .Values.capi.providers.controlPlane.name "kubeadm" }}
 ---
-apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+apiVersion: controlplane.cluster.x-k8s.io/v1beta2
 kind: KubeadmControlPlane
 metadata:
   name: {{ include "cp-name" . }}
@@ -64,75 +64,122 @@ spec:
           https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/
           */}}
           {{- if or .Values.admissionPlugins.eventRateLimit.enabled .Values.admissionPlugins.podSecurity.enabled }}
-          admission-control-config-file: /etc/kubernetes/admission-controls/admission-controls.yaml
+        - name: admission-control-config-file
+          value: /etc/kubernetes/admission-controls/admission-controls.yaml
           {{- end }}
           {{- with .Values.admissionPlugins.enable }}
-          enable-admission-plugins: {{ join "," . }}
+        - name: enable-admission-plugins
+          value: {{ join "," . }}
           {{- end }}
           {{- if .Values.kubeadm.kubeApiServer.disableAnonymousAuth }}
-          anonymous-auth: "false"
+        - name: anonymous-auth
+          value: "false"
           {{- end }}
           {{- if .Values.kubeadm.kubeApiServer.enableAuditLogs }}
-          audit-log-format: json
-          audit-log-path: "/var/log/kube-apiserver-audit-logs/log.json"
-          audit-policy-file: "/etc/kubernetes/audit-policy.yaml"
-          audit-log-maxage: "30"
-          audit-log-maxbackup: "10"
-          audit-log-maxsize: "100"
+        - name: audit-log-format
+          value: json
+        - name: audit-log-path
+          value: "/var/log/kube-apiserver-audit-logs/log.json"
+        - name: audit-policy-file
+          value: "/etc/kubernetes/audit-policy.yaml"
+        - name: audit-log-maxage
+          value: "30"
+        - name: audit-log-maxbackup
+          value: "10"
+        - name: audit-log-maxsize
+          value: "100"
           {{- end }}
-          authorization-mode: Node,RBAC
-          client-ca-file: /etc/kubernetes/pki/ca.crt
-          default-not-ready-toleration-seconds: {{ .Values.kubeadm.kubeApiServer.defaultNotReadyTolerationSeconds | quote }}
-          default-unreachable-toleration-seconds: {{ .Values.kubeadm.kubeApiServer.defaultUnreachableTolerationSeconds | quote }}
-          enable-aggregator-routing: "true"
+        - name: authorization-mode
+          value: Node,RBAC
+        - name: client-ca-file
+          value: /etc/kubernetes/pki/ca.crt
+        - name: default-not-ready-toleration-seconds
+          value: {{ .Values.kubeadm.kubeApiServer.defaultNotReadyTolerationSeconds | quote }}
+        - name: default-unreachable-toleration-seconds
+          value: {{ .Values.kubeadm.kubeApiServer.defaultUnreachableTolerationSeconds | quote }}
+        - name: enable-aggregator-routing
+          value: "true"
           {{- /*
           {{- if .Values.kubeadm.kubeApiServer.disablePublicAccessClusterInfoConfigMap }}
-          enable-bootstrap-token-auth: "false"
+          name: enable-bootstrap-token-auth
+          value: "false"
           {{- else }}
-          enable-bootstrap-token-auth: "true"
+          name: enable-bootstrap-token-auth
+          value: "true"
           {{- end }}
           */}}
-          enable-bootstrap-token-auth: "true"
-          {{- if .Values.kubeadm.etcd.encryption.enabled }}
-          encryption-provider-config: /etc/kubernetes/encryption-provider.yaml
-          {{- end }}
-          etcd-cafile: /etc/kubernetes/pki/etcd/ca.crt
-          etcd-certfile: /etc/kubernetes/pki/etcd/server.crt
-          etcd-keyfile: /etc/kubernetes/pki/etcd/server.key
-          # feature-gates: AppArmor=true
-          kubelet-client-certificate: /etc/kubernetes/pki/apiserver-kubelet-client.crt
-          kubelet-client-key: /etc/kubernetes/pki/apiserver-kubelet-client.key
-          kubelet-preferred-address-types: ExternalIP,Hostname,InternalDNS,ExternalDNS
+        - name: enable-bootstrap-token-auth
+          value: "true"
+        {{- if .Values.kubeadm.etcd.encryption.enabled }}
+        - name: encryption-provider-config
+          value: /etc/kubernetes/encryption-provider.yaml
+        {{- end }}
+        - name: etcd-cafile
+          value: /etc/kubernetes/pki/etcd/ca.crt
+        - name: etcd-certfile
+          value: /etc/kubernetes/pki/etcd/server.crt
+        - name: etcd-keyfile
+          value: /etc/kubernetes/pki/etcd/server.key
+        # - name: feature-gates
+        #   value: AppArmor=true
+        - name: kubelet-client-certificate
+          value: /etc/kubernetes/pki/apiserver-kubelet-client.crt
+        - name: kubelet-client-key
+          value: /etc/kubernetes/pki/apiserver-kubelet-client.key
+        - name: kubelet-preferred-address-types
+          value: ExternalIP,Hostname,InternalDNS,ExternalDNS
           {{- if .Values.kubeadm.kubeApiServer.oidc.enabled }}
-          oidc-issuer-url: {{ .Values.kubeadm.kubeApiServer.oidc.issuerUrl | required "ERROR: .Values.kubeadm.kubeApiServer.oidc.issuerUrl is required when oidc is enabled" }}
-          oidc-client-id: {{ tpl .Values.kubeadm.kubeApiServer.oidc.clientId . | quote }}
+        - name: oidc-issuer-url
+          value: {{ .Values.kubeadm.kubeApiServer.oidc.issuerUrl | required "ERROR: .Values.kubeadm.kubeApiServer.oidc.issuerUrl is required when oidc is enabled" }}
+        - name: oidc-client-id
+          value: {{ tpl .Values.kubeadm.kubeApiServer.oidc.clientId . | quote }}
           {{- with .Values.kubeadm.kubeApiServer.oidc.caFile }}
           {{- /*
           If this is not set here, this must be set during postKubeadmCommands.
           Without this setting, oidc login won't work.
           */}}
-          oidc-ca-file: {{ . }}
+        - name: oidc-ca-file
+          value: {{ . }}
           {{- end }}
-          oidc-username-prefix: {{ .Values.kubeadm.kubeApiServer.oidc.usernamePrefix }}
-          oidc-username-claim: {{ .Values.kubeadm.kubeApiServer.oidc.usernameClaim }}
-          oidc-groups-prefix: {{ .Values.kubeadm.kubeApiServer.oidc.groupsPrefix }}
-          oidc-groups-claim: {{ .Values.kubeadm.kubeApiServer.oidc.groupsClaim }}
+        - name: oidc-username-prefix
+          value: {{ .Values.kubeadm.kubeApiServer.oidc.usernamePrefix }}
+        - name: oidc-username-claim
+          value: {{ .Values.kubeadm.kubeApiServer.oidc.usernameClaim }}
+        - name: oidc-groups-prefix
+          value: {{ .Values.kubeadm.kubeApiServer.oidc.groupsPrefix }}
+        - name: oidc-groups-claim
+          value: {{ .Values.kubeadm.kubeApiServer.oidc.groupsClaim }}
           {{- end }}
-          profiling: "false"
-          proxy-client-cert-file: /etc/kubernetes/pki/front-proxy-client.crt
-          proxy-client-key-file: /etc/kubernetes/pki/front-proxy-client.key
-          requestheader-allowed-names: front-proxy-client
-          requestheader-client-ca-file: /etc/kubernetes/pki/front-proxy-ca.crt
-          requestheader-extra-headers-prefix: X-Remote-Extra-
-          requestheader-group-headers: X-Remote-Group
-          requestheader-username-headers: X-Remote-User
-          request-timeout: "120s"
-          service-account-key-file: /etc/kubernetes/pki/sa.pub
-          service-account-lookup: "true"
-          tls-cert-file: /etc/kubernetes/pki/apiserver.crt
-          tls-min-version: VersionTLS12
-          tls-cipher-suites: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
-          tls-private-key-file: /etc/kubernetes/pki/apiserver.key
+        - name: profiling
+          value: "false"
+        - name: proxy-client-cert-file
+          value: /etc/kubernetes/pki/front-proxy-client.crt
+        - name: proxy-client-key-file
+          value: /etc/kubernetes/pki/front-proxy-client.key
+        - name: requestheader-allowed-names
+          value: front-proxy-client
+        - name: requestheader-client-ca-file
+          value: /etc/kubernetes/pki/front-proxy-ca.crt
+        - name: requestheader-extra-headers-prefix
+          value: X-Remote-Extra-
+        - name: requestheader-group-headers
+          value: X-Remote-Group
+        - name: requestheader-username-headers
+          value: X-Remote-User
+        - name: request-timeout
+          value: "120s"
+        - name: service-account-key-file
+          value: /etc/kubernetes/pki/sa.pub
+        - name: service-account-lookup
+          value: "true"
+        - name: tls-cert-file
+          value: /etc/kubernetes/pki/apiserver.crt
+        - name: tls-min-version
+          value: VersionTLS12
+        - name: tls-cipher-suites
+          value: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+        - name: tls-private-key-file
+          value: /etc/kubernetes/pki/apiserver.key
         extraVolumes:
         {{- if .Values.kubeadm.etcd.encryption.enabled }}
         - hostPath: /etc/kubernetes/encryption-provider.yaml
@@ -164,25 +211,38 @@ spec:
         https://kubernetes.io/docs/reference/command-line-tools-reference/kube-controller-manager/
         */}}
         extraArgs:
-          allocate-node-cidrs: "true"
-          authentication-kubeconfig: /etc/kubernetes/controller-manager.conf
-          authorization-kubeconfig: /etc/kubernetes/controller-manager.conf
-          # Set it to 0.0.0.0, so livenessProbe/startupProbe.httpGet.host is not set, which is fine when bind-adress is set to node IP.
-          # If we set it to 127.0.0.1, then livenessProbe/startupProbe.httpGet.host is set to 127.0.0.1 too and so we have to replace it too.
-          # This is configured to node IP in postKubeadmCommands.
-          bind-address: 0.0.0.0
-          cluster-signing-cert-file: /etc/kubernetes/pki/ca.crt
-          cluster-signing-duration: 2160h0m0s # 90 days. Default is 8760h0m0s (1 year).
-          cluster-signing-key-file: /etc/kubernetes/pki/ca.key
-          # feature-gates: RotateKubeletServerCertificate=true,AppArmor=true
-          kubeconfig: /etc/kubernetes/controller-manager.conf
-          profiling: "false"
-          requestheader-client-ca-file: /etc/kubernetes/pki/front-proxy-ca.crt
-          root-ca-file: /etc/kubernetes/pki/ca.crt
-          secure-port: "10257"
-          service-account-private-key-file: /etc/kubernetes/pki/sa.key
-          terminated-pod-gc-threshold: "50"
-          use-service-account-credentials: "true"
+        - name: allocate-node-cidrs
+          value: "true"
+        - name: authentication-kubeconfig
+          value: /etc/kubernetes/controller-manager.conf
+        - name: authorization-kubeconfig
+          value: /etc/kubernetes/controller-manager.conf
+        - name: bind-address
+          value: 0.0.0.0
+        - name: cluster-signing-cert-file
+          value: /etc/kubernetes/pki/ca.crt
+        - name: cluster-signing-duration
+          value: 2160h0m0s # 90 days. Default is 8760h0m0s (1 year).
+        - name: cluster-signing-key-file
+          value: /etc/kubernetes/pki/ca.key
+        # - name: feature-gates
+        #   value: RotateKubeletServerCertificate=true,AppArmor=true
+        - name: kubeconfig
+          value: /etc/kubernetes/controller-manager.conf
+        - name: profiling
+          value: "false"
+        - name: requestheader-client-ca-file
+          value: /etc/kubernetes/pki/front-proxy-ca.crt
+        - name: root-ca-file
+          value: /etc/kubernetes/pki/ca.crt
+        - name: secure-port
+          value: "10257"
+        - name: service-account-private-key-file
+          value: /etc/kubernetes/pki/sa.key
+        - name: terminated-pod-gc-threshold
+          value: "50"
+        - name: use-service-account-credentials
+          value: "true"
       etcd:
         local:
           dataDir: /var/lib/etcd
@@ -195,31 +255,45 @@ spec:
           #     fieldRef:
           #       fieldPath: status.hostIP
           extraArgs:
-            auto-tls: "false"
-            cert-file: /etc/kubernetes/pki/etcd/server.crt
-            tls-min-version: TLS1.2
-            cipher-suites: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
-            client-cert-auth: "true"
-            key-file: /etc/kubernetes/pki/etcd/server.key
-            # This is configured in postKubeadmCommands to https://<node-ip>:2381
-            # listen-metrics-urls: https://0.0.0.0:2381
-            # listen-metrics-urls: http://127.0.0.1:2381,https://$(NODE_IP):2381
-            peer-auto-tls: "false"
-            peer-client-cert-auth: "true"
-            trusted-ca-file: /etc/kubernetes/pki/etcd/ca.crt
+          - name: auto-tls
+            value: "false"
+          - name: cert-file
+            value: /etc/kubernetes/pki/etcd/server.crt
+          - name: tls-min-version
+            value: TLS1.2
+          - name: cipher-suites
+            value: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+          - name: client-cert-auth
+            value: "true"
+          - name: key-file
+            value: /etc/kubernetes/pki/etcd/server.key
+          # This is configured in postKubeadmCommands to https://<node-ip>:2381
+          # listen-metrics-urls: https://0.0.0.0:2381
+          # listen-metrics-urls: http://127.0.0.1:2381,https://$(NODE_IP):2381
+          - name: peer-auto-tls
+            value: "false"
+          - name: peer-client-cert-auth
+            value: "true"
+          - name: trusted-ca-file
+            value: /etc/kubernetes/pki/etcd/ca.crt
       scheduler:
         {{- /*
         https://kubernetes.io/docs/reference/command-line-tools-reference/kube-scheduler/
         */}}
         extraArgs:
-          # Set it to 0.0.0.0, so livenessProbe/startupProbe.httpGet.host is not set, which is fine when bind-adress is set to node IP.
-          # If we set it to 127.0.0.1, then livenessProbe/startupProbe.httpGet.host is set to 127.0.0.1 too and so we have to replace it too.
-          # This is configured to node IP in postKubeadmCommands.
-          bind-address: 0.0.0.0
-          # feature-gates: AppArmor=true
-          kubeconfig: /etc/kubernetes/scheduler.conf
-          profiling: "false"
-          secure-port: "10259"
+        # Set it to 0.0.0.0, so livenessProbe/startupProbe.httpGet.host is not set, which is fine when bind-adress is set to node IP.
+        # If we set it to 127.0.0.1, then livenessProbe/startupProbe.httpGet.host is set to 127.0.0.1 too and so we have to replace it too.
+        # This is configured to node IP in postKubeadmCommands.
+        - name: bind-address
+          value: 0.0.0.0
+        # - name: feature-gates
+        #   value: AppArmor=true
+        - name: kubeconfig
+          value: /etc/kubernetes/scheduler.conf
+        - name: profiling
+          value: "false"
+        - name: secure-port
+          value: "10259"
       {{- with .Values.kubeadm.clusterDnsDomain }}
       networking:
         dnsDomain: {{ . | quote }}
@@ -534,23 +608,40 @@ spec:
         https://cluster-api.sigs.k8s.io/tasks/bootstrap/kubeadm-bootstrap/kubelet-config
         */}}
         kubeletExtraArgs:
-          anonymous-auth: "false"
-          authentication-token-webhook: "true"
-          authorization-mode: Webhook
-          cloud-provider: external
-          event-qps: "1"
-          # feature-gates: RotateKubeletServerCertificate=true
-          kubeconfig: /etc/kubernetes/kubelet.conf
-          max-pods: "120"
-          node-labels: "node.kubernetes.io/role=control-plane"
-          protect-kernel-defaults: "true"
-          read-only-port: "0"
-          rotate-certificates: "true"
-          rotate-server-certificates: "true"
-          seccomp-default: "true"
-          streaming-connection-idle-timeout: "5m"
-          tls-min-version: VersionTLS12
-          tls-cipher-suites: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+        - name: anonymous-auth
+          value: "false"
+        - name: authentication-token-webhook
+          value: "true"
+        - name: authorization-mode
+          value: Webhook
+        - name: cloud-provider
+          value: external
+        - name: event-qps
+          value: "1"
+        # - name: feature-gates
+        #   value: RotateKubeletServerCertificate=true
+        - name: kubeconfig
+          value: /etc/kubernetes/kubelet.conf
+        - name: max-pods
+          value: "120"
+        - name: node-labels
+          value: "node.kubernetes.io/role=control-plane"
+        - name: protect-kernel-defaults
+          value: "true"
+        - name: read-only-port
+          value: "0"
+        - name: rotate-certificates
+          value: "true"
+        - name: rotate-server-certificates
+          value: "true"
+        - name: seccomp-default
+          value: "true"
+        - name: streaming-connection-idle-timeout
+          value: "5m"
+        - name: tls-min-version
+          value: VersionTLS12
+        - name: tls-cipher-suites
+          value: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
       {{- /*
       # https://cluster-api.sigs.k8s.io/tasks/bootstrap/kubeadm-bootstrap/kubelet-config.html?highlight=KubeletConfiguration#use-kubeadms-kubeletconfiguration-patch-target
       # kubectl explain KubeadmControlPlane.spec.kubeadmConfigSpec.initConfiguration.patches
@@ -588,23 +679,40 @@ spec:
         https://cluster-api.sigs.k8s.io/tasks/bootstrap/kubeadm-bootstrap/kubelet-config
         */}}
         kubeletExtraArgs:
-          anonymous-auth: "false"
-          authentication-token-webhook: "true"
-          authorization-mode: Webhook
-          cloud-provider: external
-          event-qps: "1"
-          # feature-gates: RotateKubeletServerCertificate=true
-          kubeconfig: /etc/kubernetes/kubelet.conf
-          max-pods: "120"
-          node-labels: "node.kubernetes.io/role=control-plane"
-          protect-kernel-defaults: "true"
-          read-only-port: "0"
-          rotate-certificates: "true"
-          rotate-server-certificates: "true"
-          seccomp-default: "true"
-          streaming-connection-idle-timeout: "5m"
-          tls-min-version: VersionTLS12
-          tls-cipher-suites: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+        - name: anonymous-auth
+          value: "false"
+        - name: authentication-token-webhook
+          value: "true"
+        - name: authorization-mode
+          value: Webhook
+        - name: cloud-provider
+          value: external
+        - name: event-qps
+          value: "1"
+        # - name: feature-gates
+        #   value: RotateKubeletServerCertificate=true
+        - name: kubeconfig
+          value: /etc/kubernetes/kubelet.conf
+        - name: max-pods
+          value: "120"
+        - name: node-labels
+          value: "node.kubernetes.io/role=control-plane"
+        - name: protect-kernel-defaults
+          value: "true"
+        - name: read-only-port
+          value: "0"
+        - name: rotate-certificates
+          value: "true"
+        - name: rotate-server-certificates
+          value: "true"
+        - name: seccomp-default
+          value: "true"
+        - name: streaming-connection-idle-timeout
+          value: "5m"
+        - name: tls-min-version
+          value: VersionTLS12
+        - name: tls-cipher-suites
+          value: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
       {{- /*
       # https://cluster-api.sigs.k8s.io/tasks/bootstrap/kubeadm-bootstrap/kubelet-config.html?highlight=KubeletConfiguration#use-kubeadms-kubeletconfiguration-patch-target
       # kubectl explain KubeadmControlPlane.spec.kubeadmConfigSpec.joinConfiguration.patches
@@ -612,18 +720,18 @@ spec:
         directory: /etc/kubernetes/patches
       */}}
   machineTemplate:
-    infrastructureRef:
-      apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-      kind: HCloudMachineTemplate
-      name: {{ include "cp-hcloud-machine-template-name" . }}
+    spec:
+      infrastructureRef:
+        apiGroup: infrastructure.cluster.x-k8s.io
+        kind: HCloudMachineTemplate
+        name: {{ include "cp-hcloud-machine-template-name" . }}
   replicas: {{ $machines.cp.replicas }}
   version: {{ $machines.cp.k8sVersion | required "ERROR: CP k8sVersion is required" }}
   {{- /*
-  # controls how control plane machine remediation happens.
-  # remediationStrategy:
-  # rolloutAfter:
-  # rolloutBefore:
-  # rolloutStrategy:
+  # # remediation controls how unhealthy Machines are remediated.
+  # remediation:
+  # # rollout allows you to configure the behaviour of rolling updates to the control plane Machines.
+  # rollout:
   */}}
 {{- end }}
 {{- end -}}
