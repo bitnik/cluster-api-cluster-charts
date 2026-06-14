@@ -9,7 +9,7 @@
 [![Helm](https://img.shields.io/badge/Helm-3.x-0f1689.svg)](https://helm.sh)
 [![GHCR](https://img.shields.io/badge/GHCR-ghcr.io-181717?logo=github&logoColor=white&label=charts)](https://github.com/orgs/unbyte-de/packages?repo_name=cluster-api-cluster-charts)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-1.31+-326CE5?logo=kubernetes&logoColor=white)](https://kubernetes.io)
-[![Cluster API](https://img.shields.io/badge/Cluster%20API-v1beta1-326CE5?logo=kubernetes&logoColor=white)](https://cluster-api.sigs.k8s.io/)
+[![Cluster API](https://img.shields.io/badge/Cluster%20API-v1beta2-326CE5?logo=kubernetes&logoColor=white)](https://cluster-api.sigs.k8s.io/)
 [![Hetzner Cloud](https://img.shields.io/badge/Hetzner%20Cloud-D50C2D?logo=hetzner&logoColor=white)](https://www.hetzner.com/cloud)
 [![Kubeadm](https://img.shields.io/badge/Bootstrap-kubeadm-326CE5)](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/)
 <!-- [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE) -->

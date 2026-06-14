@@ -4,9 +4,9 @@
 {{- $networking := (include "networking" .) | fromYaml }}
 {{- $machines := (include "machines" .) | fromYaml }}
 {{- /*
-https://doc.crds.dev/github.com/kubernetes-sigs/cluster-api/cluster.x-k8s.io/Cluster/v1beta1@v1.8.12
+https://doc.crds.dev/github.com/kubernetes-sigs/cluster-api/cluster.x-k8s.io/Cluster/v1beta2@v1.13.2
 */}}
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: Cluster
 metadata:
   name: {{ include "cluster-name" . }}
@@ -35,23 +35,21 @@ spec:
     {{- if .Values.hCloud.lb.existing.ip }}
     host: {{ .Values.hCloud.lb.existing.ip | quote }}
     {{- else }}
-    host: ""
+    # host: ""
     {{- end }}
     port: {{ $networking.apiPort }}
   controlPlaneRef:
     {{- if eq .Values.capi.providers.controlPlane.name "kubeadm" }}
-    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+    apiGroup: controlplane.cluster.x-k8s.io
     kind: KubeadmControlPlane
     {{- end }}
     name: {{ include "cp-name" . }}
-    namespace: {{ .Release.Namespace }}
   infrastructureRef:
     {{- if eq .Values.capi.providers.infrastructure.name "hetzner" }}
-    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+    apiGroup: infrastructure.cluster.x-k8s.io
     kind: HetznerCluster
     {{- end }}
     name: {{ include "cluster-name" . }}
-    namespace: {{ .Release.Namespace }}
 {{- if eq .Values.capi.providers.infrastructure.name "hetzner" }}
 ---
 {{- /*

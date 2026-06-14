@@ -33,33 +33,28 @@ exports:
         imageName: ""
         replicas: 3
         # https://cluster-api.sigs.k8s.io/tasks/automated-machine-management/healthchecking
-        # https://doc.crds.dev/github.com/kubernetes-sigs/cluster-api/cluster.x-k8s.io/MachineHealthCheck/v1beta1@v1.8.12
+        # https://doc.crds.dev/github.com/kubernetes-sigs/cluster-api/cluster.x-k8s.io/MachineHealthCheck/v1beta2@v1.13.2
         healthCheck:
           enabled: true
-          # maxUnhealthy prevents further remediation if the cluster is already partially unhealthy.
-          # If the number of unhealthy Machines exceeds the limit set by maxUnhealthy, remediation will **not** be performed.
-          # For example if we have 3 CPs and maxUnhealthy is set to 1 (40%), and if 2 CPs are unhealthy, no remediation will be performed.
-          #
-          # To ensure that MachineHealthChecks only remediate Machines when the cluster is healthy, short-circuiting is implemented.
-          # The default value for maxUnhealthy is 100%. This means the short circuiting mechanism is disabled by default and
-          # Machines will be remediated no matter the state of the cluster.
-          # Remediation short circuiting : https://cluster-api.sigs.k8s.io/tasks/automated-machine-management/healthchecking#remediation-short-circuiting
-          #
-          # Deprecated: This field is deprecated and is going to be removed in the next apiVersion.
-          # Please see https://github.com/kubernetes-sigs/cluster-api/issues/10722 for more details.
-          maxUnhealthy: 100%
-          # nodeStartupTimeout determines how long a MachineHealthCheck should wait for a Node to join the cluster, before considering a Machine unhealthy.
-          nodeStartupTimeout: 15m0s
-          # Conditions to check on Nodes for matched Machines, if any condition is matched for the duration of its timeout,
-          # the Machine is considered unhealthy.
-          # `k get -n mgt-cluster Machine <name> -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'`
-          unhealthyConditions:
-          - type: Ready
-            status: Unknown
-            timeout: 5m0s
-          - type: Ready
-            status: "False"
-            timeout: 5m0s
+          checks:
+            # determines how long a MachineHealthCheck should wait for a Node to join the cluster, before considering a Machine unhealthy.
+            nodeStartupTimeoutSeconds: 900 # 15 minutes
+            # Conditions to check on Nodes for matched Machines, if any condition is matched for the duration of its timeout,
+            # the Machine is considered unhealthy
+            unhealthyNodeConditions:
+            - type: Ready
+              status: Unknown
+              timeoutSeconds: 300
+            - type: Ready
+              status: "False"
+              timeoutSeconds: 300
+              # unhealthyMachineConditions: []
+          remediation:
+            # This is used only if remediation is enabled.
+            triggerIf:
+              # The default value for unhealthyLessThanOrEqualTo is 100%.
+              # This means the short circuiting mechanism is disabled by default and Machines will be remediated no matter the state of the cluster.
+              unhealthyLessThanOrEqualTo: 100%
       # Multi-pool worker config.
       # Each entry under `pools` becomes its own MachineDeployment + HCloudMachineTemplate + KubeadmConfigTemplate (+ MachineHealthCheck).
       # `defaults` is merged into every pool; per-pool fields win.
@@ -78,15 +73,31 @@ exports:
             maxSize: ""
           healthCheck:
             enabled: true
-            maxUnhealthy: 100%
-            nodeStartupTimeout: 10m0s
-            unhealthyConditions:
-            - type: Ready
-              status: Unknown
-              timeout: 3m0s
-            - type: Ready
-              status: "False"
-              timeout: 3m0s
+            checks:
+              # determines how long a MachineHealthCheck should wait for a Node to join the cluster, before considering a Machine unhealthy.
+              nodeStartupTimeoutSeconds: 600 # 10 minutes
+              # Conditions to check on Nodes for matched Machines, if any condition is matched for the duration of its timeout,
+              # the Machine is considered unhealthy
+              unhealthyNodeConditions:
+              - type: Ready
+                status: Unknown
+                timeoutSeconds: 180
+              - type: Ready
+                status: "False"
+                timeoutSeconds: 180
+                # unhealthyMachineConditions:
+                # - type: "NodeReady"
+                #   status: Unknown
+                #   timeoutSeconds: 1800
+                # - type: "InfrastructureReady"
+                #   status: "False"
+                #   timeoutSeconds: 1800
+            remediation:
+              # This is used only if remediation is enabled.
+              triggerIf:
+                # The default value for unhealthyLessThanOrEqualTo is 100%.
+                # This means the short circuiting mechanism is disabled by default and Machines will be remediated no matter the state of the cluster.
+                unhealthyLessThanOrEqualTo: 100%
         pools: {}
         # pools:
         #   # The pool named "default" renders with un-suffixed resource names (`<cluster>-worker`) so it lines up with the legacy `machines.worker:` block.
