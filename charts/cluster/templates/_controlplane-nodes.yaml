@@ -344,7 +344,7 @@ spec:
 
         while [ ! -f /etc/kubernetes/manifests/etcd.yaml ]; do sleep 10; done
         echo "Configuring etcd metrics URLs..."
-        NODEIP=$(curl -s https://api.ipify.org | tr -d '\n')
+        {{- include "cluster.fetchNodeIp" . | nindent 8 }}
         sed -i "s|--listen-metrics-urls=http://127.0.0.1:2381|--listen-metrics-urls=https://$NODEIP:2381,http://127.0.0.1:2381|" /etc/kubernetes/manifests/etcd.yaml
         cat /etc/kubernetes/manifests/etcd.yaml | grep -i "listen-metrics-urls"
         while [ ! -f /etc/kubernetes/manifests/kube-scheduler.yaml ]; do sleep 10; done

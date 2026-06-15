@@ -248,3 +248,11 @@ Two migration paths, all safe:
   then add additional keys (e.g. `pools.gpu: { type: ccx33, ... }`).
   The `default` pool is unchanged, only the new pool's resources are created.
   See the [multi-pool example](#multi-pool-example) above for more details.
+
+### From 0.10.1 to 0.10.2
+
+Node IP discovery in `postKubeadmCommands` now uses the Hetzner metadata service (`169.254.169.254`) instead of `api.ipify.org`,
+fixing silent empty-IP failures when ipify was unreachable.
+
+**Replaces all nodes.** The change alters the embedded bootstrap config, so CP and worker nodes are **rolled and re-created** on upgrade.
+No config changes needed; plan for a full node rollout.
