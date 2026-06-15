@@ -3,4 +3,4 @@ apiVersion: v2
 name: cluster
 description: A library chart for cluster configuration using Cluster API.
 type: library
-version: 0.13.0
+version: 0.13.1
